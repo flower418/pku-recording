@@ -283,7 +283,7 @@ def build_parser():
         sp.add_argument("course", help="课程关键字（支持模糊匹配）")
         sp.add_argument("--all", action="store_true", help="包含历史课程")
         sp.add_argument("--out", default=DEFAULT_OUT_DIR, help="下载目录")
-        sp.add_argument("--workers", type=int, default=32, help="分片下载并发数")
+        sp.add_argument("--workers", type=int, default=96, help="分片下载并发数")
         sp.add_argument("--refresh", action="store_true", help="忽略缓存")
         if name == "download":
             sp.add_argument("--select", help="要下载的编号，如 1,3-5；不填则交互选择")
@@ -302,7 +302,7 @@ def main(argv=None):
         ns = argparse.Namespace(
             all=False,
             out=DEFAULT_OUT_DIR,
-            workers=32,
+            workers=96,
             refresh=False,
             non_interactive=False,
             no_proxy=False,
