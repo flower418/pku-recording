@@ -119,8 +119,8 @@ def cmd_login(args):
 
 
 def cmd_logout(args):
-    logout()
-    print("已清除本地会话")
+    removed = logout(forget_username=not args.keep_username)
+    print("已清除：" + "、".join(removed) if removed else "没有需要清除的内容")
 
 
 def cmd_overview(args):
@@ -266,7 +266,8 @@ def build_parser():
     sp = sub.add_parser("login", help="登录并缓存会话")
     sp.set_defaults(func=cmd_login)
 
-    sp = sub.add_parser("logout", help="清除本地会话")
+    sp = sub.add_parser("logout", help="清除本地会话（默认连记住的学号一起清除）")
+    sp.add_argument("--keep-username", action="store_true", help="保留记住的学号")
     sp.set_defaults(func=cmd_logout)
 
     sp = sub.add_parser("overview", help="列出课程及其回放")

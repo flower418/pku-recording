@@ -7,6 +7,7 @@ import os
 import requests
 
 from .util import (
+    CONFIG_PATH,
     COOKIES_PATH,
     UA,
     ensure_dirs,
@@ -219,9 +220,19 @@ def ensure_login(session=None, interactive=True, force=False):
 
     login(session, username, password, interactive=True)
     print("登录成功 ✓")
+    print(f"已记住学号（{CONFIG_PATH}，仅学号，不含密码；`pku-recording logout` 可清除）")
     return session
 
 
-def logout():
+def logout(forget_username=True):
+    """清除本地会话；默认连记住的学号一起清除。"""
+    removed = []
     if os.path.exists(COOKIES_PATH):
         os.remove(COOKIES_PATH)
+        removed.append("登录会话")
+    if forget_username:
+        cfg = load_config()
+        if cfg.pop("username", None) is not None:
+            save_config(cfg)
+            removed.append("记住的学号")
+    return removed
