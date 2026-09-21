@@ -200,8 +200,27 @@ def get_videos_many(session, courses, workers=4, refresh=False, progress=None):
     return result
 
 
-def _extract_params_from_iframe(session, play_url):
-    """打开播放页，跟随 iframe 重定向，拿到 yjapise 需要的参数。"""
+class PlayParamError(Exception):
+    """播放参数解析失败（可重试）。"""
+
+
+def _extract_params_from_iframe(session, play_url, attempts=3):
+    """打开播放页，跟随 iframe 重定向，拿到 yjapise 需要的参数。
+
+    yjapise 的 CAS 接口偶发校验失败（返回缺少参数的提示页），
+    这里每次都用新加载的播放页重试（sign/timestamp 是一次性的）。
+    """
+    last_err = None
+    for attempt in range(attempts):
+        try:
+            return _extract_params_once(session, play_url)
+        except PlayParamError as e:
+            last_err = e
+            time.sleep(0.8 * (attempt + 1))
+    raise RuntimeError(f"解析播放参数失败（已重试 {attempts} 次）: {last_err}")
+
+
+def _extract_params_once(session, play_url):
     r = _get(session, play_url, timeout=30, headers=_headers())
 
     iframes = re.findall(r"<iframe[^>]*src=\"([^\"]+)\"", r.text)
@@ -215,7 +234,7 @@ def _extract_params_from_iframe(session, play_url):
             if "ltiStorage" not in src and "developer.blackboard.com" not in src:
                 iframe = src
     if iframe is None:
-        raise RuntimeError("播放页中找不到播放器 iframe")
+        raise PlayParamError("播放页中找不到播放器 iframe（登录态可能已过期）")
 
     # 注意：这里不能用 html.unescape，否则 &timestamp 会被解析成 ×tamp
     iframe = iframe.replace("&amp;", "&")
@@ -241,9 +260,10 @@ def _extract_params_from_iframe(session, play_url):
     sub_id = (fq2.get("sub_id") or [sub_id])[0]
 
     if not (course_id and sub_id and app_id and auth_data):
-        raise RuntimeError(
-            "解析播放参数失败 "
-            f"(course_id={course_id}, sub_id={sub_id}, app_id={app_id}, auth_data={bool(auth_data)})"
+        snippet = re.sub(r"\s+", " ", r2.text or "")[:100].strip()
+        raise PlayParamError(
+            f"未拿到 auth_data (HTTP {r2.status_code}; "
+            f"course_id={course_id}, sub_id={sub_id}, app_id={app_id}; 响应: {snippet})"
         )
     return course_id, sub_id, app_id, auth_data
 

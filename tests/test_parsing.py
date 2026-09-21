@@ -163,3 +163,42 @@ class TestAES(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestResolveRetry(unittest.TestCase):
+    """auth_data 解析失败时应自动重试（yjapise 偶发抽风）。"""
+
+    def setUp(self):
+        from pku_recording import blackboard
+
+        self.bb = blackboard
+        self._orig_once = blackboard._extract_params_once
+        self._orig_sleep = blackboard.time.sleep
+        blackboard.time.sleep = lambda *_: None
+
+    def tearDown(self):
+        self.bb._extract_params_once = self._orig_once
+        self.bb.time.sleep = self._orig_sleep
+
+    def test_retry_then_success(self):
+        calls = {"n": 0}
+
+        def fake_once(session, url):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise self.bb.PlayParamError("临时失败")
+            return ("c", "s", "a", "auth")
+
+        self.bb._extract_params_once = fake_once
+        self.assertEqual(self.bb._extract_params_from_iframe(None, "u"), ("c", "s", "a", "auth"))
+        self.assertEqual(calls["n"], 3)
+
+    def test_raises_after_all_attempts(self):
+        def always_fail(session, url):
+            raise self.bb.PlayParamError("一直失败")
+
+        self.bb._extract_params_once = always_fail
+        with self.assertRaises(RuntimeError) as cm:
+            self.bb._extract_params_from_iframe(None, "u", attempts=2)
+        self.assertIn("已重试 2 次", str(cm.exception))
+        self.assertIn("一直失败", str(cm.exception))
