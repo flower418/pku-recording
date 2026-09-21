@@ -1,0 +1,4 @@
+requests>=2.25
+# 可选（二选一即可做 AES 解密，都没有则使用系统 openssl）：
+# cryptography>=3.3
+# pycryptodome

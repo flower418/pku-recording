@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pku-recording"
+dynamic = ["version"]
+description = "北京大学教学网（Blackboard）课程回放下载工具（m3u8 + AES-128 自动解密）"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+keywords = ["pku", "blackboard", "m3u8", "hls", "downloader"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+dependencies = ["requests>=2.25"]
+
+[project.optional-dependencies]
+# 可选：更快的 AES 解密后端（不装则自动使用 openssl 命令行）
+fast = ["cryptography>=3.3"]
+
+[project.scripts]
+pku-recording = "pku_recording.cli:main"
+
+[tool.setuptools]
+packages = ["pku_recording"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pku_recording.__version__" }
